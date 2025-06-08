@@ -24,8 +24,9 @@ WhirlWords is a Python-powered Boggle-style word game where players try to find 
 ---
 
 ## 🛠️ How to Run
-Clone the repo:
-
-   ```bash
+1. Clone the repo:
    git clone https://github.com/ynaev/whirl_words.git
    cd whirl_words
+2. Make sure your Python environment is set up (Python 3.10+ recommended).
+3. Run the main script:
+   python whirlwords.py
