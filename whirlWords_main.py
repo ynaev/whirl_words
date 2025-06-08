@@ -9,7 +9,7 @@ Play a word game with customizable grid sizes
 """
 
 #Load English dictionary
-with open(r"C:\Users\ynaev\Documents\Liz's Python Data\wordslist.txt") as f:
+with open(r"C:\Users\ynaev\AppData\Local\Programs\Python\Python313\whirl_words\dictionary_words.txt") as f:
     dictionary = set(word.strip().lower() for word in f)
 
 numDice = int(input("How many dice would you like to compete against?  "))
