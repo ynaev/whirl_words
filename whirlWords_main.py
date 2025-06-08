@@ -63,7 +63,7 @@ def find_words(x, y, path, visited, word, words_found, dictionary):
 #=================================================================================================
 #Search the board and store words into the dictionary.
 def boggle_solver(wWGrid, dictionary):
-    words_found = set()  #Introduce the words list
+    words_found = set()  #Instantiate the words list
     rows, cols = len(wWGrid), len(wWGrid[0])
     for i in range(rows):
         for j in range(cols):

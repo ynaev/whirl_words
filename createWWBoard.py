@@ -1,27 +1,5 @@
 import tkinter as tk
 
-def createWWBoard(wWGrid):
-    #Create a main window
-    root = tk.Tk()
-    root.title("WhirlWords Grid")
-    
-    #Iterate over your chosen letters to create a grid
-    for i, row in enumerate(wWGrid):
-        for j, letter in enumerate(row):
-            # Create a label for each letter and place it in a grid
-            label = tk.Label(root, text=letter, width=5, height=2, relief="solid", anchor="center")
-            label.grid(row=i, column=j, padx=5, pady=5)
-    
-    root.mainloop()  #Run the tkinter event loop
-
-# Example 4x4 grid of letters
-grid_letters = [
-    ["T", "R", "A", "P"],
-    ["E", "O", "L", "S"],
-    ["M", "B", "I", "N"],
-    ["C", "K", "U", "D"]
-]
-
 def create_board(grid):
     rows, cols = len(grid), len(grid[0])
 
