@@ -1,8 +1,7 @@
 import random
-import math
 
-def genWWDice(numDice, numFaces):
-    letterProbabilities = {  #Define exact probability percentages (sum should be ~100%)
+def gen_w_w_dice(num_dice, num_faces):
+    letter_probabilities = {  #Define exact probability percentages (sum should be ~100%)
         'A': 7,
         'B': 3,
         'C': 2,
@@ -32,14 +31,14 @@ def genWWDice(numDice, numFaces):
         }
 
     #Extract letters and their associated weights
-    letters = list(letterProbabilities.keys())
-    weights = list(letterProbabilities.values())
+    letters = list(letter_probabilities.keys())
+    weights = list(letter_probabilities.values())
 
     #Assign letters to dice faces based on probability
     dice = []
 
-    for _ in range(numDice):
-        dieFaces = random.choices(letters, weights=weights, k=numFaces)  #Select k faces based on probability
-        dice.append(dieFaces)
+    for _ in range(num_dice):
+        die_faces = random.choices(letters, weights=weights, k=num_faces)  #Select k faces based on probability
+        dice.append(die_faces)
 
     return dice

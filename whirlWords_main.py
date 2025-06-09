@@ -1,137 +1,71 @@
 import random
 import math
 import genWWDice
+import tkinter as tk
+import helper
 from createWWBoard import create_board
 
-#def whirlWords():
-"""
-Play a word game with customizable grid sizes
-"""
+#Load English dictionary safely
+valid_words = set()  #Instantiate the list of acceptable words
+dictionary_path = r"C:\Users\ynaev\AppData\Local\Programs\Python\Python313\whirl_words\dictionary_words.txt"
+try:
+    with open(dictionary_path, 'r') as f:
+        valid_words = set(word.strip().lower() for word in f)
+except FileNotFoundError:  #Catches the most likely issue — bad path.
+    print(f"⚠️ Error: Dictionary file not found at:\n{dictionary_path}")
+    print("The game cannot continue without a valid word list.")
+    exit(1)  #Stops the script so you’re not running a game without words.
+except Exception as e:  #Catches anything else weird, like encoding errors.
+    print(f"⚠️ An unexpected error occurred while loading the dictionary:\n{e}")
+    exit(1)  #Stops the script so you’re not running a game without words.
 
-#Load English dictionary
-with open(r"C:\Users\ynaev\AppData\Local\Programs\Python\Python313\whirl_words\dictionary_words.txt") as f:
-    dictionary = set(word.strip().lower() for word in f)
+def whirl_words():
+    """
+    Play a Boggle-style word game with customizable grid sizes
+    """
+#=================================================================================================
+    num_dice = int(input("How many dice would you like to compete against?  ")) #Get user customization
+    nearest_perfect_square = (math.ceil(math.sqrt(num_dice)) **2)  #Find the nearest perfect square
+    grid_size = int(math.sqrt(nearest_perfect_square))
+    if nearest_perfect_square != num_dice:
+        num_dice = nearest_perfect_square  #Reset numDice to updated value
+        print(f"I've rounded the dice up to the nearest perfect square to create a nice grid of {grid_size} x {grid_size}")
+    num_faces = int(input("How many faces would you like each die to have?  ")) #Get user customization
 
-numDice = int(input("How many dice would you like to compete against?  "))
-nearestPerfectSquare = (math.ceil(math.sqrt(numDice)) **2)  #Find the nearest perfect square
-if nearestPerfectSquare != numDice:
-    numDice = nearestPerfectSquare  #Reset numDice to updated value
-    print(f"I've rounded the dice up to the nearest perfect square to create a nice grid of {int(math.sqrt(nearestPerfectSquare))} x {int(math.sqrt(nearestPerfectSquare))}")
-
-"""
-Example Adjustments:
-User enters 6 → Adjusts to 9 (since sqrt(6) ≈ 2.45, rounds to 3, t
-hen 3² = 9).
-User enters 15 → Adjusts to 16 (sqrt(15) ≈ 3.87, rounds to 4, then 4² = 16).
-User enters 20 → Adjusts to 25 (sqrt(20) ≈ 4.47, rounds to 5, then 5² = 25).
-User enters 25 → Remains at 25.
-"""
-numFaces = int(input("How many faces would you like each die to have?  "))
-dice = genWWDice.genWWDice(numDice, numFaces)  #Call the function and unpack the returned values.
-gridSize = math.isqrt(numDice)  #Finds the square root of the number of dice, ensuring a square grid size.
-chosenLetters = [random.choice(die).lower() for die in dice]  #Randomly choose one face from each die
-wWGrid = [chosenLetters[i:i+gridSize] for i in range(0, len(chosenLetters), gridSize)]  #Arrange the letters into a grid
-
-print("Can you find all the words hidden in this grid?  You've got 30 seconds.  Type 'end game' to stop.\nGo!\n")
+#=================================================================================================    
+    dice = genWWDice.gen_w_w_dice(num_dice, num_faces)  #Call the function to generate the dice
+    chosen_letters = [random.choice(die).upper() for die in dice]  #Randomly choose one face from each die
+    w_w_grid = [chosen_letters[i:i+grid_size] for i in range(0, len(chosen_letters), grid_size)]  #Arrange the letters into a grid
+    max_word_length = num_dice  # Placeholder for future validation
+    print("Can you find all the words hidden in this grid?  You've got 30 seconds.\n\nGo!\n")
 
 #=================================================================================================
-# Directions for moving in 8 directions (dx, dy)
-directions = [(-1, -1), (-1, 0), (-1, 1),
-              (0, -1),          (0, 1),
-              (1, -1),  (1, 0),  (1, 1)]
+    #Call the function to display the board
+    game_time = 30
+    submitted_words = []
+    
+    root = tk.Tk()
+    root.title("whirl_words")
+    root.lift()  #Tells the window to come forward
+    root.attributes('-topmost', True)  #Forces it to the very top (over everything)
+    root.after(1000, lambda: root.attributes('-topmost', False))  #Drops the "always on top" behavior after 1 second so it doesn’t block other windows later on.
 
-#=================================================================================================
-def find_words(x, y, path, visited, word, words_found, dictionary):
-    if word in dictionary and len(word) > 2:
-        words_found.add(word)
+    create_board(root, w_w_grid)  #Calls the function to build the board
 
-    if len(word) > 10:  # You can adjust this limit if needed
-        return
+    entry = tk.Entry(root, font=("Helvetica", 16))
+    entry.pack(pady=10)
+    entry.bind('<Return>', lambda event: helper.submit_word(entry, submitted_words, valid_words))
 
-    rows, cols = len(wWGrid), len(wWGrid[0])
+    submit_btn = tk.Button(root, text="Submit Word", command=lambda: helper.submit_word(entry, submitted_words, valid_words))
 
-    # Explore neighbors
-    for dx, dy in directions:
-        nx, ny = x + dx, y + dy
-        if 0 <= nx < rows and 0 <= ny < cols and (nx, ny) not in visited:
-            find_words(nx, ny,
-                       path + [(nx, ny)],
-                       visited | {(nx, ny)},
-                       word + wWGrid[nx][ny],
-                       words_found, dictionary)
+    score_label = tk.Label(root, text="Score: 0", font=("Helvetica", 14))
+    score_label.pack(pady=5)
 
-#=================================================================================================
-#Search the board and store words into the dictionary.
-def boggle_solver(wWGrid, dictionary):
-    words_found = set()  #Instantiate the words list
-    rows, cols = len(wWGrid), len(wWGrid[0])
-    for i in range(rows):
-        for j in range(cols):
-            find_words(i, j, [(i, j)], {(i, j)}, wWGrid[i][j], words_found, dictionary)  #Call to function find_words
-    return words_found
+    timer_label = tk.Label(root, text="Time Left: 30", font=("Helvetica", 14))
+    timer_label.pack(pady=5)
+    helper.start_timer(root, timer_label, entry, submit_btn, game_time)
 
-#=================================================================================================
-create_board(wWGrid)  #Call the function to display the board
-found_words = boggle_solver(wWGrid, dictionary) #Create master word list for current game grid
-print(found_words)
+    root.mainloop()
 
-#Determine max length of word possible.
-
-#Create a dictionary to store words of each possible length, minimum of 3.
-
-#Count the total number of valid words hidden in the current game grid
-#totalPossibleWords =  len.wWMasterList
-
-"""
-timerDuration = 30  #Set the duration for the timer in seconds
-startTime = time.time()  # Store the start time
-userWords = [] #Create a list for user's entries
-
-# Prompt the user for input until the timer runs out
-while True:
-    elapsedTime = time.time() - startTime  #Track the elapsed time    
-    if elapsedTime > timerDuration:
-        print("Time's up!")
-        break  #Exit the loop when time is up    
-    userWord = input()  #Ask the user to input a word
-    if len(userWord) < 3:
-        print('Words must be at least 3 letters long.')
-        input()
-    if userWord in userWords:
-        print("You've already found that one, keep looking!")
-        input()
-    if userWord == 'end game':
-        break  #Exit game at the request of the user
-    userWords.append(userWord)  #Add the word to the user's list
-
-#Separate words into valid and invalid lists
-validWords = [word for word in userWords if word in dictionary] 
-invalidWords = [word for word in userWords if word not in dictionary]
-      
-#Display breakdown of user's words
-print("Valid words:")
-for word in validWords:
-      print(word)
-print("\nInvalid words")
-for word in invalidWords:
-      print(word)
-
-def scoreWord(word):
-    length = len(word)
-    if length <= 4:
-        return 1
-    elif length == 5:
-        return 2
-    elif length == 6:
-        return 3
-    elif length == 7:
-        return 5
-    elif length > 7:
-        return 11
-
-userScore = sum(scoreWord(word) for word in validWords)  #Calculate user's score
-#possibleScore = sum(scoreWord(word) for word in wWMasterList)  #Calculate possible score
-
-print(f"You've scored {userScore}")
-#, which calculates to {userScore}/{possibleScore}: .2%")
-"""
+if __name__ == "__main__":
+    whirl_words()
