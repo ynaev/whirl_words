@@ -11,7 +11,7 @@ def create_board(parent, grid):
         grid: 2D list of letters representing the board layout.
     """
     rows, cols = len(grid), len(grid[0])
-    canvas = tk.Canvas(parent, width=cols * square_size, height=rows * square_size)
+    canvas = tk.Canvas(parent, width=cols * square_size + 10, height=rows * square_size + 10)
     canvas.pack()
 
     for i in range(rows):
@@ -32,7 +32,7 @@ def create_board(parent, grid):
             canvas.create_text(
                 cx,
                 cy - 10,
-                text=grid[i][j],
+                text=str(grid[i][j]),
                 font=("Consolas", 24, "bold")
             )
 

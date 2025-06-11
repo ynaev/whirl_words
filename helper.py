@@ -2,14 +2,14 @@
 def letter_pool(total_tiles, num_dice, num_faces):
     import random
 
-    high_value_letters = {'C', 'J', 'K', 'Qu', 'V', 'X', 'Z'}
+    high_value_letters = {'B', 'C', 'J', 'K', 'Qu', 'V', 'W', 'X', 'Z'}
 
     letter_probabilities = {
-        'A': 7, 'B': 3, 'C': 2, 'D': 6, 'E': 10,
+        'A': 7.5, 'B': 3.1, 'C': 2.1, 'D': 6, 'E': 10,
         'F': 4, 'G': 3, 'H': 3, 'I': 5, 'J': 2,
         'K': 2, 'L': 4, 'M': 3, 'N': 4, 'O': 6,
         'P': 3, 'Qu': 1, 'R': 4, 'S': 5, 'T': 6,
-        'U': 4, 'V': 2, 'W': 3, 'X': 2, 'Y': 4,
+        'U': 4, 'V': 2, 'W': 3.2, 'X': 2, 'Y': 4,
         'Z': 2
     }
 
@@ -60,27 +60,27 @@ def generate_grid_from_dice(dice, grid_size):
     return grid
 
 #=================================================================================================
-#Search the board and store words into the dictionary.
-def boggle_solver(w_w_grid, dictionary):
+def boggle_solver(grid, dictionary, prefixes):  #Search the board and store words into the dictionary.
     words_found = set()  #Instantiate the words list
-    rows, cols = len(w_w_grid), len(w_w_grid[0])
+    rows, cols = len(grid), len(grid[0])
     for i in range(rows):
         for j in range(cols):
-            find_words(i, j, [(i, j)], {(i, j)}, w_w_grid[i][j], words_found, dictionary, w_w_grid)  #Call to function find_words
+            find_words(i, j, [(i, j)], {(i, j)}, grid[i][j], words_found, dictionary, grid, prefixes)  #Call to function find_words
     return words_found
 
 #=================================================================================================
-# Directions for moving in 8 directions (dx, dy)
-directions = [(-1, -1), (-1, 0), (-1, 1),
+directions = [(-1, -1), (-1, 0), (-1, 1),  #Directions for moving in 8 directions (dx, dy)
             (0, -1),          (0, 1),
             (1, -1),  (1, 0),  (1, 1)]
 
-def find_words(x, y, path, visited, word, words_found, dictionary, w_w_grid):
+def find_words(x, y, path, visited, word, words_found, dictionary, w_w_grid, prefixes):
+    word = word.lower()
+
+    if len(word) > 2 and word not in prefixes:
+        return
+    
     if word in dictionary and len(word) > 2:
         words_found.add(word)
-
-    if len(word) > 10:  # You can adjust this limit if needed
-        return
 
     rows, cols = len(w_w_grid), len(w_w_grid[0])
 
@@ -88,44 +88,21 @@ def find_words(x, y, path, visited, word, words_found, dictionary, w_w_grid):
     for dx, dy in directions:
         nx, ny = x + dx, y + dy
         if 0 <= nx < rows and 0 <= ny < cols and (nx, ny) not in visited:
-            find_words(nx, ny,
-                    path + [(nx, ny)],
-                    visited | {(nx, ny)},
-                    word + w_w_grid[nx][ny],
-                    words_found, dictionary)
+            find_words(nx, ny, path + [(nx, ny)], visited | {(nx, ny)}, word + w_w_grid[nx][ny], words_found, dictionary, w_w_grid, prefixes)
 
 #=================================================================================================
-def submit_word(entry, submitted_words, valid_words, score_label, score_tracker, submitted_listbox):
-        import tkinter as tk
+def submit_word(entry, submitted_words, submitted_listbox):
+    import tkinter as tk
 
-        word = entry.get().strip().lower()  #grab the text and clean whitespace
-        if word:            
-            entry.delete(0, tk.END)  #Clear the box after submission
-        if not word:
-            return #Do nothing on an empty input
-        if word in submitted_words:
-            print(f"You've already submitted {word}. Try again.")
-        else:
-            if word in valid_words:
-                submitted_words.append(word)
-                submitted_listbox.insert(tk.END, word)  # Add word to listbox
-                points = calculate_score(word)
-                score_tracker[0] += points
-                score_label.config(text=f"Score: {score_tracker[0]}")
-            else:
-                print(f"{word} is not found in the dictionary. Try again.")
-
-#=================================================================================================
-def start_timer(root, timer_label, entry, submit_btn, game_time):
-    if game_time > 0:        
-        game_time -= 1
-        timer_label.config(text=f"Time Left: {game_time}")
-        root.after(1000, lambda: start_timer(root, timer_label, entry, submit_btn, game_time))
-    else:
-        entry.config(state="disabled")
-        submit_btn.config(state="disabled")
-        print("Time’s up!")
-        root.after(1000, root.destroy)  #Automatically close the window after 1 second delay
+    word = entry.get().strip().lower()  #grab the text and clean whitespace
+    if word and word in submitted_words:
+        return
+    if word and word not in submitted_words:
+        submitted_words.append(word)
+        entry.delete(0, tk.END)  #Clear the box after submission
+        submitted_listbox.insert(tk.END, word)  # Add word to listbox
+    if not word:
+        return #Do nothing on an empty input
 
 #=================================================================================================
 def calculate_score(word):
@@ -143,7 +120,7 @@ def calculate_score(word):
     else:
         return 11
 
-#=================================================================================================
+#=================================================================================================    
 def force_focus(root, entry):
     root.deiconify()  #Show the window (in case it's minimized)
     root.lift()  #Bring it to the front
@@ -151,3 +128,48 @@ def force_focus(root, entry):
     root.after(500, lambda: root.attributes('-topmost', False))  #Drop "always on top"
     root.focus_force()  #Try to grab focus
     entry.focus_set()  #Set cursor in the text box too
+
+#=================================================================================================
+def clear_frame(frame):
+    for widget in frame.winfo_children():
+        widget.destroy()
+
+#=================================================================================================
+def validate_user_words(submitted_words, master_word_list, score_tracker, messagebox):
+    valid_words = set()
+    invalid_words = set()
+
+    for word in submitted_words:
+        if word in master_word_list:
+            valid_words.add(word)
+        else:
+            invalid_words.add(word)
+    print("All submitted words:", submitted_words)
+    # Score the valid words
+    total_score = sum(calculate_score(word) for word in valid_words)
+    score_tracker[0] = total_score
+
+    total_possible_score = sum(calculate_score(word) for word in master_word_list)
+
+    #Show feedback
+    if invalid_words:
+        messagebox.showinfo(
+            "Game Over", 
+            f"You found {len(valid_words)} valid words!\n\n"
+            f"Your final score is {score_tracker[0]}/{total_possible_score}\n\n"
+            f"Invalid guesses:\n{', '.join(sorted(invalid_words))}"
+        )
+    else:
+        messagebox.showinfo(
+            "Game Over",
+            f"You found {len(valid_words)} valid words!\n\n"
+            f"Your final score is {score_tracker[0]}/{total_possible_score}"
+        )
+
+#=================================================================================================
+def build_prefix_set(words):  #Build prefix set
+    prefixes = set()
+    for word in words:
+        for i in range(len(word)):
+            prefixes.add(word[:i+1])
+    return prefixes
