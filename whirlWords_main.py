@@ -1,13 +1,14 @@
 import os
-import random
 import math
+import random
 import tkinter as tk
 import tkinter.messagebox as messagebox
 import tkinter.simpledialog as simpledialog
+
 import helper
 from createWWBoard import create_board
 
-# Load English dictionary safely
+#Load English dictionary
 valid_words = set()
 dictionary_path = os.path.join(os.path.dirname(__file__), 'dictionary_words.txt')
 try:
@@ -21,12 +22,24 @@ except Exception as e:
     print(f"⚠️ An unexpected error occurred while loading the dictionary:\n{e}")
     exit(1)
 
+#=================================================================================================
+def center_window(window, width, height):
+        """Center a tkinter window on the screen."""
+        screen_width = window.winfo_screenwidth()
+        screen_height = window.winfo_screenheight()
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+        window.geometry(f"{width}x{height}+{x}+{y}")
+
+#=================================================================================================
 def whirl_words():
     """
-    whirlWords_main.py
+    Main game logic for the WhirlWords game.
     A Boggle-style word game with customizable dice and grid settings.
     Built with tkinter.
     """
+
+    #Prompt for grid size
     while True:
         try:
             num_dice = simpledialog.askinteger("Grid Setup", "How many dice would you like to Whirl through?\n(Minimum: 9)")
@@ -44,7 +57,7 @@ def whirl_words():
 
     if nearest_perfect_square != num_dice:
         num_dice = nearest_perfect_square
-        print(f"I've rounded the dice up to the nearest perfect square to create a nice grid of {grid_size} x {grid_size}")
+        print(f"I've rounded the dice up to get a lovely {grid_size} x {grid_size} grid.")
 
     while True:
         num_faces = simpledialog.askinteger("Dice Setup", "How many faces should each die have?\n(Minimum: 2)")
@@ -56,20 +69,27 @@ def whirl_words():
         break
 
     total_tiles = num_dice * num_faces
-
     dice = helper.letter_pool(total_tiles, num_dice, num_faces)
     w_w_grid = helper.generate_grid_from_dice(dice, grid_size)
+    nonlocal_grid = [w_w_grid]  # Wrap in a mutable object to track changes
     prefixes = helper.build_prefix_set(valid_words)
 
     submitted_words = []
     master_word_list = set()
-    score_tracker = [0]    
+    score_tracker = [0]
+    reshuffled = [False]
 
+    # ==== UI Setup ====
     root = tk.Tk()
+    root.title("whirl_words")
     root.lift()
     root.attributes('-topmost', True)
     root.after_idle(root.attributes, '-topmost', False)
-    root.title("whirl_words")
+
+    square_size = 100
+    total_width = grid_size * square_size + 500  # Add room for buttons/entries/etc
+    total_height = grid_size * square_size + 100
+    center_window(root, total_width, total_height)
 
     main_frame = tk.Frame(root)
     main_frame.pack(padx=10, pady=10)
@@ -82,14 +102,20 @@ def whirl_words():
 
     create_board(board_frame, w_w_grid)
 
+    # ==== Entry & Buttons ====
     entry = tk.Entry(right_frame, font=("Helvetica", 16))
-    entry.pack(pady=10)    
-    entry.bind('<Return>', lambda event: helper.submit_word(entry, submitted_words, submitted_listbox))
+    entry.pack(pady=10)
     entry.config(state="disabled")
 
+    submitted_listbox = tk.Listbox(right_frame, height=15, width=20, font=("Helvetica", 12))
+    scrollbar = tk.Scrollbar(right_frame, orient="vertical", command=submitted_listbox.yview)
+    submitted_listbox.config(yscrollcommand=scrollbar.set)
+
+    entry.bind('<Return>', lambda event: helper.submit_word(entry, submitted_words, submitted_listbox))
+
     submit_btn = tk.Button(right_frame, text="Submit Word", command=lambda: helper.submit_word(entry, submitted_words, submitted_listbox))
-    submit_btn.config(state="disabled")
     submit_btn.pack(pady=5)
+    submit_btn.config(state="disabled")    
 
     timer_label = tk.Label(right_frame, text="Time Left: 30", font=("Helvetica", 14))
     timer_label.pack(pady=5)
@@ -97,37 +123,44 @@ def whirl_words():
     possible_words_label = tk.Label(right_frame, text="Number of Hidden Words: Calculating...", font=("Helvetica", 12, "italic"))
     possible_words_label.pack()
 
-    submitted_label = tk.Label(right_frame, text="Words Submitted:", font=("Helvetica", 14, "bold"))
-    submitted_label.pack(pady=(10,0))
-
-    listbox_frame = tk.Frame(right_frame)
-    listbox_frame.pack()
-
-    submitted_listbox = tk.Listbox(right_frame, height=15, width=20, font=("Helvetica", 12))
+    tk.Label(right_frame, text="Words Submitted:", font=("Helvetica", 14, "bold")).pack(pady=(10, 0))
     submitted_listbox.pack(side="left", fill="y")
-
-    scrollbar = tk.Scrollbar(right_frame, orient="vertical", command=submitted_listbox.yview)
     scrollbar.pack(side="left", fill="y")
 
-    submitted_listbox.config(yscrollcommand=scrollbar.set)
-
-    reshuffled = [False]
-
+    # ==== Reshuffle ====
     def reshuffle_grid():
         if reshuffled[0]:
-            return
+            return        
         for die in dice:
             random.shuffle(die)
         random.shuffle(dice)
+        
+        new_grid = helper.generate_grid_from_dice(dice, grid_size)
+        nonlocal_grid[0] = new_grid
         helper.clear_frame(board_frame)
-        w_w_grid = helper.generate_grid_from_dice(dice, grid_size)
-        create_board(board_frame, w_w_grid)
+        create_board(board_frame, new_grid)
+
         reshuffle_button.config(state="disabled")
         reshuffled[0] = True
 
     reshuffle_button = tk.Button(right_frame, text="Reshuffle Grid", font=("Helvetica", 14), bg="#ffccaa", command=reshuffle_grid)
     reshuffle_button.pack(pady=5)
 
+    # ==== Rotate ====
+    def rotate_board():
+        current_grid = nonlocal_grid[0]
+        rotated_grid = list(zip(*current_grid[::-1]))  # 90° clockwise
+        rotated_grid = [list(row) for row in rotated_grid]  # convert tuples back to lists
+
+        nonlocal_grid[0] = rotated_grid
+
+        helper.clear_frame(board_frame)
+        create_board(board_frame, rotated_grid)
+
+    rotate_button = tk.Button(right_frame, text="↻ Rotate Board", font=("Helvetica", 14), bg="#ccddff", command=rotate_board)
+    rotate_button.pack(pady=5)
+
+    # ==== Start Game ====
     game_time = tk.IntVar(value=30)
 
     def start_game():        
@@ -138,23 +171,17 @@ def whirl_words():
         reshuffled[0] = False
         reshuffle_button.config(state="disabled")
         start_button.config(state="disabled")
-        start_timer(game_time, on_end=on_timer_end)
+        rotate_button.config(state="normal")
+
         nonlocal master_word_list
-        master_word_list = helper.boggle_solver(w_w_grid, valid_words, prefixes)
+        master_word_list = helper.boggle_solver(nonlocal_grid[0], valid_words, prefixes)
         possible_words_label.config(text=f"Number of Hidden Words: {len(master_word_list)}")
+        start_timer(game_time, on_end=on_timer_end)
 
     start_button = tk.Button(right_frame, text="Start Game", font=("Helvetica", 14), bg="#aaffaa", command=start_game)
     start_button.pack(pady=10)
 
-    def on_timer_end():
-        helper.validate_user_words(submitted_words, master_word_list, score_tracker, messagebox)
-        result = messagebox.askyesno("Game Over", "Play again?")
-        if result:
-            root.destroy()
-            whirl_words()
-        else:
-            root.destroy()
-
+    # ==== Timer ====
     def start_timer(game_time, on_end=None):
         if game_time.get() > 0:
             game_time.set(game_time.get() - 1)
@@ -163,16 +190,38 @@ def whirl_words():
         else:
             entry.config(state="disabled")
             submit_btn.config(state="disabled")
-            print("Time’s up!")
             if on_end:
                 on_end()  # Call your custom game-over logic
             else:
                 root.after(1000, root.destroy)  # Default behavior: auto-close after 1 second
+
+    # ==== End Game ====
+    def on_timer_end():
+        entry.config(state="disabled")
+        submit_btn.config(state="disabled")
+        entry.unbind('<Return>')  # stop enter submissions
+
+        dummy_focus = tk.Label(root)
+        dummy_focus.pack()
+        dummy_focus.focus_set()
+
+        def ask_to_play_again():
+            dummy_focus.destroy()
+            result = messagebox.askyesno("Game Over", "Play again?")
+            if result:
+                root.destroy()
+                whirl_words()
+            else:
+                root.destroy()
+
+        # ==== Show score dialog ====
+        helper.validate_user_words(submitted_words, master_word_list, score_tracker, on_close_callback=ask_to_play_again)
 
     root.update_idletasks()
     root.geometry(f"{root.winfo_width()}x{root.winfo_height()}")
     root.resizable(False, False)
     root.mainloop()
 
+#=================================================================================================
 if __name__ == "__main__":
     whirl_words()

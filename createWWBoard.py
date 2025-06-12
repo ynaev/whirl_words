@@ -2,7 +2,7 @@ import tkinter as tk
 
 square_size = 100  # You could also move this to a config module later
 
-def create_board(parent, grid):
+def create_board(board_frame, grid):
     """
     Draws a grid-based game board using Tkinter Canvas.
     
@@ -11,7 +11,7 @@ def create_board(parent, grid):
         grid: 2D list of letters representing the board layout.
     """
     rows, cols = len(grid), len(grid[0])
-    canvas = tk.Canvas(parent, width=cols * square_size + 10, height=rows * square_size + 10)
+    canvas = tk.Canvas(board_frame, width=cols * square_size + 10, height=rows * square_size + 10)
     canvas.pack()
 
     for i in range(rows):

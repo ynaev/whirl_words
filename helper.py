@@ -1,15 +1,20 @@
+import random
+import tkinter as tk
+
 #=================================================================================================
 def letter_pool(total_tiles, num_dice, num_faces):
-    import random
-
+    """
+    Generates a list of dice, each with a balanced selection of letters.
+    Ensures high-value letters are evenly distributed across dice.
+    """
     high_value_letters = {'B', 'C', 'J', 'K', 'Qu', 'V', 'W', 'X', 'Z'}
 
     letter_probabilities = {
-        'A': 7.5, 'B': 3.1, 'C': 2.1, 'D': 6, 'E': 10,
+        'A': 7.5, 'B': 2.9, 'C': 1.7, 'D': 6, 'E': 10.8,
         'F': 4, 'G': 3, 'H': 3, 'I': 5, 'J': 2,
         'K': 2, 'L': 4, 'M': 3, 'N': 4, 'O': 6,
         'P': 3, 'Qu': 1, 'R': 4, 'S': 5, 'T': 6,
-        'U': 4, 'V': 2, 'W': 3.2, 'X': 2, 'Y': 4,
+        'U': 4, 'V': 2, 'W': 2.8, 'X': 1.5, 'Y': 4,
         'Z': 2
     }
 
@@ -17,12 +22,11 @@ def letter_pool(total_tiles, num_dice, num_faces):
     weights = list(letter_probabilities.values())
 
     raw_pool = random.choices(letters, weights=weights, k=total_tiles)  #Generate a raw pool of letters using weighted probabilities
-
     high_value_pool = [ltr for ltr in raw_pool if ltr in high_value_letters]  #Extract high-value letters from the raw pool
     random.shuffle(high_value_pool)  #Shuffle to randomize which ones are chosen
+
     max_allowed = min(len(high_value_pool), num_dice)  #Limit to one high-value letter per die (or fewer if there aren’t enough)
     selected_hv = high_value_pool[:max_allowed]
-
     for hv in selected_hv:  #Remove those selected high-value letters from the pool to avoid duplicates
         raw_pool.remove(hv)
 
@@ -49,18 +53,14 @@ def letter_pool(total_tiles, num_dice, num_faces):
 
 #=================================================================================================
 def generate_grid_from_dice(dice, grid_size):
-    import random
-    
+    """Selects one random letter per die and arranges them into a 2D grid."""
     selected_letters = [random.choice(die) for die in dice]  #Grabs one letter from each die
-    grid = [
-        selected_letters[i:i + grid_size]
-        for i in range(0, len(selected_letters), grid_size)
-    ]
-
+    grid = [selected_letters[i:i + grid_size] for i in range(0, len(selected_letters), grid_size)]
     return grid
 
 #=================================================================================================
-def boggle_solver(grid, dictionary, prefixes):  #Search the board and store words into the dictionary.
+def boggle_solver(grid, dictionary, prefixes):
+    """Runs a full grid DFS to find all valid words."""
     words_found = set()  #Instantiate the words list
     rows, cols = len(grid), len(grid[0])
     for i in range(rows):
@@ -70,10 +70,11 @@ def boggle_solver(grid, dictionary, prefixes):  #Search the board and store word
 
 #=================================================================================================
 directions = [(-1, -1), (-1, 0), (-1, 1),  #Directions for moving in 8 directions (dx, dy)
-            (0, -1),          (0, 1),
-            (1, -1),  (1, 0),  (1, 1)]
+              (0, -1),           (0, 1),
+              (1, -1),  (1, 0),  (1, 1)]
 
 def find_words(x, y, path, visited, word, words_found, dictionary, w_w_grid, prefixes):
+    """Recursive DFS function to explore all word paths."""
     word = word.lower()
 
     if len(word) > 2 and word not in prefixes:
@@ -92,8 +93,7 @@ def find_words(x, y, path, visited, word, words_found, dictionary, w_w_grid, pre
 
 #=================================================================================================
 def submit_word(entry, submitted_words, submitted_listbox):
-    import tkinter as tk
-
+    """Handles user-submitted words and updates the UI."""
     word = entry.get().strip().lower()  #grab the text and clean whitespace
     if word and word in submitted_words:
         return
@@ -106,6 +106,7 @@ def submit_word(entry, submitted_words, submitted_listbox):
 
 #=================================================================================================
 def calculate_score(word):
+    """Returns the score of a word based on length."""
     length = len(word)
     if length < 3:
         return 0
@@ -122,6 +123,7 @@ def calculate_score(word):
 
 #=================================================================================================    
 def force_focus(root, entry):
+    """Brings the game window to front and focuses the entry field."""
     root.deiconify()  #Show the window (in case it's minimized)
     root.lift()  #Bring it to the front
     root.attributes('-topmost', True)  #Stay on top
@@ -131,45 +133,79 @@ def force_focus(root, entry):
 
 #=================================================================================================
 def clear_frame(frame):
+    """Destroys all widgets in a frame."""
     for widget in frame.winfo_children():
         widget.destroy()
 
 #=================================================================================================
-def validate_user_words(submitted_words, master_word_list, score_tracker, messagebox):
-    valid_words = set()
-    invalid_words = set()
-
-    for word in submitted_words:
-        if word in master_word_list:
-            valid_words.add(word)
-        else:
-            invalid_words.add(word)
-    print("All submitted words:", submitted_words)
-    # Score the valid words
-    total_score = sum(calculate_score(word) for word in valid_words)
-    score_tracker[0] = total_score
-
+def validate_user_words(submitted_words, master_word_list, score_tracker, on_close_callback=None):
+    """
+    Validates submitted words against master list, calculates score,
+    and shows a score popup. Triggers `on_close_callback` after closing.
+    """
+    valid_entries = sorted([word for word in submitted_words if word in master_word_list])
+    missed_words = sorted(master_word_list - set(valid_entries))
+    score = sum(calculate_score(word) for word in valid_entries)
+    score_tracker[0] = score
     total_possible_score = sum(calculate_score(word) for word in master_word_list)
 
-    #Show feedback
-    if invalid_words:
-        messagebox.showinfo(
-            "Game Over", 
-            f"You found {len(valid_words)} valid words!\n\n"
-            f"Your final score is {score_tracker[0]}/{total_possible_score}\n\n"
-            f"Invalid guesses:\n{', '.join(sorted(invalid_words))}"
-        )
-    else:
-        messagebox.showinfo(
-            "Game Over",
-            f"You found {len(valid_words)} valid words!\n\n"
-            f"Your final score is {score_tracker[0]}/{total_possible_score}"
-        )
+    # Create a safe custom popup
+    score_window = tk.Toplevel()
+    score_window.title("Your Score")
+    score_window.geometry("400x300")
+    score_window.grab_set()  # Make it modal
+    score_window.focus_force()  # Force focus here
+
+    # Center the score window on the screen
+    score_window.update_idletasks()  # Ensure winfo_width/height is accurate
+    screen_width = score_window.winfo_screenwidth()
+    screen_height = score_window.winfo_screenheight()
+    width = score_window.winfo_width()
+    height = score_window.winfo_height()
+    x = (screen_width // 2) - (width // 2)
+    y = (screen_height // 2) - (height // 2)
+    score_window.geometry(f"{width}x{height}+{x}+{y}")
+
+    #Create frames for side-by-side lists
+    list_frame = tk.Frame(score_window)
+    list_frame.pack(padx=10, pady=10, fill="both", expand=True)
+
+    #Valid Words
+    valid_label = tk.Label(list_frame, text="You found: ", font=("Helvetica", 12, "bold"))
+    valid_label.grid(row=0, column=0, padx=10, sticky="w")
+
+    valid_list = tk.Listbox(list_frame, width=30, height=15)
+    valid_list.grid(row=1, column=0, padx=10, sticky="ns")
+
+    for word in sorted(valid_entries):
+        valid_list.insert("end", word)
+    
+    # Missed Words
+    missed_label = tk.Label(list_frame, text="You Missed:", font=("Helvetica", 12, "bold"))
+    missed_label.grid(row=0, column=1, padx=10, sticky="w")
+
+    missed_list = tk.Listbox(list_frame, width=30, height=15)
+    missed_list.grid(row=1, column=1, padx=10, sticky="ns")
+
+    for word in missed_words:
+        missed_list.insert("end", word)
+
+    tk.Label(score_window, text=f"Your score: {score}/{total_possible_score}", font=("Helvetica", 16)).pack(pady=10)
+
+    def close_score():
+        score_window.destroy()
+        if on_close_callback:
+            on_close_callback()
+
+    close_btn = tk.Button(score_window, text="OK", command=close_score)
+    close_btn.pack(pady=10)
+    close_btn.focus_set()  # This button takes Enter, but...
+
+    score_window.bind('<Return>', lambda e: "break")
+    score_window.protocol("WM_DELETE_WINDOW", close_score)
 
 #=================================================================================================
-def build_prefix_set(words):  #Build prefix set
+def build_prefix_set(words):
+    """Returns a set of all possible prefixes from a word list."""
     prefixes = set()
-    for word in words:
-        for i in range(len(word)):
-            prefixes.add(word[:i+1])
-    return prefixes
+    return {word[:i+1] for word in words for i in range(len(word))}
