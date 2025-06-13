@@ -2,7 +2,7 @@ import random
 import tkinter as tk
 
 #=================================================================================================
-def letter_pool(total_tiles, num_dice, num_faces):
+def letter_pool(num_faces, num_dice):
     """
     Generates a list of dice, each with a balanced selection of letters.
     Ensures high-value letters are evenly distributed across dice.
@@ -21,7 +21,7 @@ def letter_pool(total_tiles, num_dice, num_faces):
     letters = list(letter_probabilities.keys())
     weights = list(letter_probabilities.values())
 
-    raw_pool = random.choices(letters, weights=weights, k=total_tiles)  #Generate a raw pool of letters using weighted probabilities
+    raw_pool = random.choices(letters, weights=weights, k=num_faces * num_dice)  #Generate a raw pool of letters using weighted probabilities
     high_value_pool = [ltr for ltr in raw_pool if ltr in high_value_letters]  #Extract high-value letters from the raw pool
     random.shuffle(high_value_pool)  #Shuffle to randomize which ones are chosen
 
@@ -92,17 +92,25 @@ def find_words(x, y, path, visited, word, words_found, dictionary, w_w_grid, pre
             find_words(nx, ny, path + [(nx, ny)], visited | {(nx, ny)}, word + w_w_grid[nx][ny], words_found, dictionary, w_w_grid, prefixes)
 
 #=================================================================================================
-def submit_word(entry, submitted_words, submitted_listbox):
-    """Handles user-submitted words and updates the UI."""
-    word = entry.get().strip().lower()  #grab the text and clean whitespace
-    if word and word in submitted_words:
-        return
-    if word and word not in submitted_words:
-        submitted_words.append(word)
-        entry.delete(0, tk.END)  #Clear the box after submission
-        submitted_listbox.insert(tk.END, word)  # Add word to listbox
+def submit_word(entry_widget, submitted_words, listbox_widget):
+    word = entry_widget.get().strip().lower()
+
     if not word:
-        return #Do nothing on an empty input
+        return
+
+    if word in submitted_words:
+        entry_widget.delete(0, tk.END)
+
+        # Flash red background
+        original_color = entry_widget.cget("bg")
+        entry_widget.config(bg="red")
+        entry_widget.after(200, lambda: entry_widget.config(bg=original_color))
+
+        return
+
+    submitted_words.append(word)
+    listbox_widget.insert(tk.END, word)
+    entry_widget.delete(0, tk.END)
 
 #=================================================================================================
 def calculate_score(word):
@@ -138,71 +146,19 @@ def clear_frame(frame):
         widget.destroy()
 
 #=================================================================================================
-def validate_user_words(submitted_words, master_word_list, score_tracker, on_close_callback=None):
+def validate_and_score(submitted_words, master_word_list):
     """
-    Validates submitted words against master list, calculates score,
-    and shows a score popup. Triggers `on_close_callback` after closing.
+    Returns:
+    - valid_entries: list of submitted words that are correct
+    - missed_words: list of valid words not found
+    - score: score from valid entries
+    - total_possible_score: score from all possible valid words
     """
     valid_entries = sorted([word for word in submitted_words if word in master_word_list])
     missed_words = sorted(master_word_list - set(valid_entries))
     score = sum(calculate_score(word) for word in valid_entries)
-    score_tracker[0] = score
     total_possible_score = sum(calculate_score(word) for word in master_word_list)
-
-    # Create a safe custom popup
-    score_window = tk.Toplevel()
-    score_window.title("Your Score")
-    score_window.geometry("400x300")
-    score_window.grab_set()  # Make it modal
-    score_window.focus_force()  # Force focus here
-
-    # Center the score window on the screen
-    score_window.update_idletasks()  # Ensure winfo_width/height is accurate
-    screen_width = score_window.winfo_screenwidth()
-    screen_height = score_window.winfo_screenheight()
-    width = score_window.winfo_width()
-    height = score_window.winfo_height()
-    x = (screen_width // 2) - (width // 2)
-    y = (screen_height // 2) - (height // 2)
-    score_window.geometry(f"{width}x{height}+{x}+{y}")
-
-    #Create frames for side-by-side lists
-    list_frame = tk.Frame(score_window)
-    list_frame.pack(padx=10, pady=10, fill="both", expand=True)
-
-    #Valid Words
-    valid_label = tk.Label(list_frame, text="You found: ", font=("Helvetica", 12, "bold"))
-    valid_label.grid(row=0, column=0, padx=10, sticky="w")
-
-    valid_list = tk.Listbox(list_frame, width=30, height=15)
-    valid_list.grid(row=1, column=0, padx=10, sticky="ns")
-
-    for word in sorted(valid_entries):
-        valid_list.insert("end", word)
-    
-    # Missed Words
-    missed_label = tk.Label(list_frame, text="You Missed:", font=("Helvetica", 12, "bold"))
-    missed_label.grid(row=0, column=1, padx=10, sticky="w")
-
-    missed_list = tk.Listbox(list_frame, width=30, height=15)
-    missed_list.grid(row=1, column=1, padx=10, sticky="ns")
-
-    for word in missed_words:
-        missed_list.insert("end", word)
-
-    tk.Label(score_window, text=f"Your score: {score}/{total_possible_score}", font=("Helvetica", 16)).pack(pady=10)
-
-    def close_score():
-        score_window.destroy()
-        if on_close_callback:
-            on_close_callback()
-
-    close_btn = tk.Button(score_window, text="OK", command=close_score)
-    close_btn.pack(pady=10)
-    close_btn.focus_set()  # This button takes Enter, but...
-
-    score_window.bind('<Return>', lambda e: "break")
-    score_window.protocol("WM_DELETE_WINDOW", close_score)
+    return valid_entries, missed_words, score, total_possible_score
 
 #=================================================================================================
 def build_prefix_set(words):
