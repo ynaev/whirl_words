@@ -5,48 +5,53 @@ import tkinter as tk
 def letter_pool(num_faces, num_dice):
     """
     Generates a list of dice, each with a balanced selection of letters.
-    Ensures high-value letters are evenly distributed across dice.
+    Enforces:
+        - max 2 vowels per die
+        - max 2 special letters per die
+        - no duplicates per die
     """
-    high_value_letters = {'B', 'C', 'J', 'K', 'Qu', 'V', 'W', 'X', 'Z'}
+    def is_valid_die(die):
+        vowels = {'A', 'E', 'I', 'O', 'U'}
+        specials = {'B', 'C', 'J', 'K', 'QU', 'V', 'W', 'X', 'Z'}
+
+        normalized = [ltr.upper() for ltr in die]  # Ensure all are uppercase
+        no_duplicates = len(set(normalized)) == len(normalized)
+
+        vowel_count = sum(1 for ltr in normalized if ltr in vowels)
+        special_count = sum(1 for ltr in normalized if ltr in specials)
+
+        return no_duplicates and vowel_count <= 2 and special_count <= 2
 
     letter_probabilities = {
-        'A': 7.5, 'B': 2.9, 'C': 1.7, 'D': 6, 'E': 10.8,
-        'F': 4, 'G': 3, 'H': 3, 'I': 5, 'J': 2,
-        'K': 2, 'L': 4, 'M': 3, 'N': 4, 'O': 6,
-        'P': 3, 'Qu': 1, 'R': 4, 'S': 5, 'T': 6,
-        'U': 4, 'V': 2, 'W': 2.8, 'X': 1.5, 'Y': 4,
-        'Z': 2
+        'A': 8.33, 'B': 3.12, 'C': 3.12, 'D': 4.17, 'E': 10.42,
+        'F': 2.08, 'G': 3.12, 'H': 3.12, 'I': 7.29, 'J': 1.04,
+        'K': 2.08, 'L': 5.21, 'M': 3.12, 'N': 5.21, 'O': 6.25,
+        'P': 3.12, 'Qu': 1.04, 'R': 4.17, 'S': 5.21, 'T': 5.21,
+        'U': 4.17, 'V': 2.08, 'W': 2.08, 'X': 1.04, 'Y': 3.12,
+        'Z': 1.04
     }
 
     letters = list(letter_probabilities.keys())
     weights = list(letter_probabilities.values())
 
-    raw_pool = random.choices(letters, weights=weights, k=num_faces * num_dice)  #Generate a raw pool of letters using weighted probabilities
-    high_value_pool = [ltr for ltr in raw_pool if ltr in high_value_letters]  #Extract high-value letters from the raw pool
-    random.shuffle(high_value_pool)  #Shuffle to randomize which ones are chosen
+    max_attempts = 1000  # To prevent infinite loops
+    dice = []
 
-    max_allowed = min(len(high_value_pool), num_dice)  #Limit to one high-value letter per die (or fewer if there aren’t enough)
-    selected_hv = high_value_pool[:max_allowed]
-    for hv in selected_hv:  #Remove those selected high-value letters from the pool to avoid duplicates
-        raw_pool.remove(hv)
+    attempts = 0
+    while len(dice) < num_dice and attempts < max_attempts:
+        attempts += 1
+        pool = random.choices(letters, weights=weights, k=num_faces)
+        
+        # Ensure no duplicates and check other constraints
+        if is_valid_die(pool):
+            dice.append(pool)
 
-    dice = [[] for _ in range(num_dice)]  #Prepare an empty list for each die
+    if len(dice) < num_dice:
+        print(f"⚠️ Only generated {len(dice)} of {num_dice} dice after {max_attempts} attempts.")
+        print("⚠️ Dice factory jammed. May contain cursed cubes.")
 
-    for i in range(len(selected_hv)):  #Iterate through the list of high-value letters
-        dice[i].append(selected_hv[i])  #Add one high-value letter per die (only to as many dice as selected_hv)
-
-    for die in dice:  #Fill in the remaining spaces on each die with random letters from the pool
-        needed = num_faces - len(die)
-        chosen = random.sample(raw_pool, needed)
-        die.extend(chosen)
-        for ltr in chosen:
-            raw_pool.remove(ltr)
-
-    leftover = num_dice * num_faces - sum(len(d) for d in dice)  #Check for any imbalance (usually caused by not enough letters left)
-    if leftover > 0:
-        print("⚠️ Warning: Could not fully balance dice. Game may contain dangerous levels of spice.")
-
-    for die in dice:  #Shuffle each die so high-value letters aren’t always first
+    # Final shuffle for fairness
+    for die in dice:
         random.shuffle(die)
 
     return dice

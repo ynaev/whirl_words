@@ -2,8 +2,6 @@ import os
 import math
 import random
 import tkinter as tk
-import tkinter.messagebox as messagebox
-import tkinter.simpledialog as simpledialog
 
 import helper
 from createWWBoard import create_board
@@ -26,7 +24,9 @@ except Exception as e:
 color_a = "#0B0A0D"
 color_b = "#212B40"
 color_c = "#2B2D16"
-color_e = "#D9AB82"
+color_e = "#B4C007"
+color_f = "#046104"
+color_g = "#7E0707"
 
 # ==== Globals ====
 submitted_words = []
@@ -38,7 +38,7 @@ dice = []
 prefixes = helper.build_prefix_set(valid_words)
 
 #=================================================================================================
-def whirl_words(num_dice, num_faces, grid_size):
+def whirl_words(num_dice, num_faces, grid_size, game_duration):
     """
     Main game logic for the WhirlWords game.
     A Boggle-style word game with customizable dice and grid settings.
@@ -58,7 +58,7 @@ def whirl_words(num_dice, num_faces, grid_size):
     # ============================ Set Up Screen ============================
     # ==== Left Frame ====
     left_frame = tk.Frame(main_screen, bg=color_c, width=600)
-    left_frame.pack(side="left", fill="y")
+    left_frame.pack(side="left", fill="y", padx=20)
 
     # ==== Center Frame ====
     center_frame = tk.Frame(main_screen, bg=color_c)
@@ -66,7 +66,7 @@ def whirl_words(num_dice, num_faces, grid_size):
 
     # ==== Right Frame ====
     right_frame = tk.Frame(main_screen, bg=color_c, width=600)
-    right_frame.pack(side="right", fill="y")
+    right_frame.pack(side="right", fill="y", padx=20)
 
     # ============================ Set Up Center Play Screen ============================
     # ================= Inner Play Screen =================
@@ -75,7 +75,7 @@ def whirl_words(num_dice, num_faces, grid_size):
     game_frame.place(relx=0.5, rely=0.5, anchor='center')
 
     # ==== Timer countdown box ====
-    timer_label = tk.Label(game_frame, text="Time Left: 30", font=("Helvetica", 20, "bold"), bg=color_c, fg=color_e)
+    timer_label = tk.Label(game_frame, text=f"Time Left: {game_duration.get()}", font=("Helvetica", 20, "bold"), bg=color_c, fg=color_e)
     timer_label.pack(pady=10)
 
     # ==== Score Box ====
@@ -93,7 +93,7 @@ def whirl_words(num_dice, num_faces, grid_size):
     entry.config(state="disabled")
 
     # ==== Submit Entry Box ====
-    submit_btn = tk.Button(game_frame, text="Submit Word", command=lambda: helper.submit_word(entry, submitted_words, submitted_listbox))
+    submit_btn = tk.Button(game_frame, text="Submit Word",bg=color_c, fg=color_e, command=lambda: helper.submit_word(entry, submitted_words, submitted_listbox))
     submit_btn.pack(pady=5)
     submit_btn.config(state="disabled")
 
@@ -106,7 +106,7 @@ def whirl_words(num_dice, num_faces, grid_size):
         helper.clear_frame(board_frame)
         create_board(board_frame, rotated_grid)
 
-    rotate_button = tk.Button(game_frame, text="↻ Rotate Board", font=("Helvetica", 20), bg="#ccddff", command=rotate_board)
+    rotate_button = tk.Button(game_frame, text="↻", font=("Helvetica", 20), bg=color_b, fg=color_e, command=rotate_board)
     rotate_button.pack(pady=5)
 
     # ==== Reshuffle ====
@@ -125,7 +125,7 @@ def whirl_words(num_dice, num_faces, grid_size):
         reshuffle_button.config(state="disabled")
         reshuffled[0] = True
 
-    reshuffle_button = tk.Button(game_frame, text="Reshuffle Grid", font=("Helvetica", 20), bg="#ffccaa", command=reshuffle_grid)
+    reshuffle_button = tk.Button(game_frame, text="Reshuffle Grid", font=("Helvetica", 14), bg=color_b, fg=color_e, command=reshuffle_grid)
     reshuffle_button.pack(pady=5)
 
     # ==== Start Game ====
@@ -133,14 +133,11 @@ def whirl_words(num_dice, num_faces, grid_size):
         original_color = board_frame.cget("bg")
         board_frame.config(bg="green")
         root.after(200, lambda: board_frame.config(bg=original_color))
-
-    game_time = tk.IntVar(value=30)
-
+    
     def start_game():        
         entry.config(state="normal")
         submit_btn.config(state="normal")
         helper.force_focus(root, entry)
-        game_time.set(30)
         reshuffled[0] = False
         reshuffle_button.config(state="disabled")
         start_button.config(state="disabled")
@@ -149,21 +146,22 @@ def whirl_words(num_dice, num_faces, grid_size):
 
         master_word_list[0] = helper.boggle_solver(nonlocal_grid[0], valid_words, prefixes)
         master_words_label.config(text=f"Number of Hidden Words:\n{len(master_word_list[0])}")
-        start_timer(game_time, on_end=on_timer_end)
+        
+        start_timer(game_duration, on_end=on_timer_end)
 
-    start_button = tk.Button(game_frame, text="Start Game", font=("Helvetica", 14), bg="#aaffaa", command=start_game)
+    start_button = tk.Button(game_frame, text="Start Game", font=("Helvetica", 14), bg=color_f, fg=color_e, command=start_game)
     start_button.pack(pady=10)
 
     # ==== Quit Button ====
-    quit_button = tk.Button(game_frame, text="Quit", font=("Helvetica", 14), bg="red", command=root.quit)
+    quit_button = tk.Button(game_frame, text="Quit", font=("Helvetica", 14), bg=color_g, fg=color_e, command=root.quit)
     quit_button.pack(pady=(10))  # Adds top padding for spacing
 
     # ==== Timer ====
-    def start_timer(game_time, on_end=None):
-        if game_time.get() > 0:
-            game_time.set(game_time.get() - 1)
-            timer_label.config(text=f"Time Left: {game_time.get()}")
-            root.after(1000, lambda: start_timer(game_time, on_end=on_end))
+    def start_timer(game_duration, on_end=None):
+        if game_duration.get() > 0:
+            game_duration.set(game_duration.get() - 1)
+            timer_label.config(text=f"Time Left: {game_duration.get()}")
+            root.after(1000, lambda: start_timer(game_duration, on_end=on_end))
         else:
             entry.config(state="disabled")
             submit_btn.config(state="disabled")
@@ -211,12 +209,14 @@ def whirl_words(num_dice, num_faces, grid_size):
         entry.unbind('<Return>')
 
         def restart_game():
-            main_screen.destroy()
+            for widget in root.winfo_children():
+                widget.destroy()
             submitted_words.clear()
             master_word_list[0].clear()
             reshuffled[0] = False
             score_tracker[0] = 0
-            whirl_words(num_dice, num_faces, grid_size)
+            game_duration = tk.IntVar(value=(grid_size - 2) * 60)
+            whirl_words(num_dice, num_faces, grid_size, game_duration)
 
         start_button.config(text="Play Again", command=restart_game)
         start_button.config(state="normal")
@@ -232,25 +232,20 @@ def whirl_words(num_dice, num_faces, grid_size):
         score_tracker[0] = score
 
         score_label.config(text=f"You scored {score_tracker[0]}/{total_possible_score}!")
+
         master_listbox.delete(0, tk.END)
-        for word in sorted(master_word_list[0]):
+        for word in sorted(master_word_list[0], key=lambda w: (len(w), w)):
             master_listbox.insert(tk.END, word)
         
-        submitted_words_label.config(text="Valid Words:")
+        submitted_words_label.config(text=f"Valid Words:\n{len(submitted_words)}")
 
         submitted_listbox.delete(0, tk.END)
         for word in sorted(valid_entries):
             submitted_listbox.insert(tk.END, word)
 
 # ============================ UI Setup ============================
-if __name__ == "__main__":
-    # ==== Root Window ====
-    root = tk.Tk()
-    root.title("WhirlWords")
-    root.configure(bg=color_a)
-    root.state('zoomed')
-
-    # ==== Game setup frame ====
+def create_setup_screen():
+    # ==== Set up game frame ====
     setup_frame = tk.Frame(root, bg=color_c)
     setup_frame.pack(expand=True)
 
@@ -264,23 +259,19 @@ if __name__ == "__main__":
 
     # ==== Number of dice text box ====
     dice_frame = tk.Frame(setup_frame, bg=color_c)
-    dice_frame_label = tk.Label(dice_frame, text="Number of Dice (min 9):", font=("Helvetica", 16), bg=color_c, fg=color_e).pack(side="left", padx=5)
+    tk.Label(dice_frame, text="Number of Dice (min 9):", font=("Helvetica", 16), bg=color_c, fg=color_e).pack(side="left", padx=5)
     dice_frame.pack(pady=10)
-
-    # ==== Number of dice entry box ====
-    dice_entry = tk.Entry(dice_frame, font=("Helvetica", 16))
+    dice_entry = tk.Entry(dice_frame, font=("Helvetica", 16), width=3, justify="center")
     dice_entry.pack(side="left")
 
     # ==== Sides per die text box ====
     face_frame = tk.Frame(setup_frame, bg=color_c)
-    face_frame_label = tk.Label(face_frame, text="Number of Faces per Die (min 2):", font=("Helvetica", 16), bg=color_c, fg=color_e).pack(side="left", padx=5)
+    tk.Label(face_frame, text="Number of Faces per Die (min 2):", font=("Helvetica", 16), bg=color_c, fg=color_e).pack(side="left", padx=5)
     face_frame.pack(pady=10)
-
-    # ==== Sides per die entry box ====
-    face_entry = tk.Entry(face_frame, font=("Helvetica", 16))
+    face_entry = tk.Entry(face_frame, font=("Helvetica", 16), width=3, justify="center")
     face_entry.pack(side="left")
 
-    # Feedback Label
+    # ==== Feedback Label ====
     feedback_label = tk.Label(setup_frame, text="", font=("Helvetica", 14), bg=color_c, fg="red")
     feedback_label.pack(pady=10)
 
@@ -302,16 +293,16 @@ if __name__ == "__main__":
             if nearest_perfect_square != num_dice:
                 num_dice = nearest_perfect_square
                 print(f"Rounding up to make a {grid_size}x{grid_size} grid.")
-            
-            try:  #Test if dice generation works before destroying setup screen
+
+            try:
                 test_dice = helper.letter_pool(num_faces, num_dice)
-            except ValueError as e:
+            except ValueError:
                 feedback_label.config(text="Not enough letters to fill all dice. Try fewer dice or faces.")
                 return
 
-            # If all good, proceed
             setup_frame.destroy()
-            whirl_words(num_dice, num_faces, grid_size)
+            game_duration = tk.IntVar(value=(grid_size - 2) * 60)
+            whirl_words(num_dice, num_faces, grid_size, game_duration)
 
         except ValueError:
             feedback_label.config(text="Please enter valid numbers.")
@@ -319,7 +310,16 @@ if __name__ == "__main__":
     start_button = tk.Button(setup_frame, text="Begin the Whirling", font=("Helvetica", 18), bg="#88cc88", command=validate_and_start)
     start_button.pack(pady=30)
     start_button.bind("<Return>", lambda event: validate_and_start())
-    
+
     dice_entry.focus_set()
+
+# ============================ Launch Game ============================
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.title("WhirlWords")
+    root.configure(bg=color_a)
+    root.state('zoomed')
+
+    create_setup_screen()
 
     root.mainloop()
